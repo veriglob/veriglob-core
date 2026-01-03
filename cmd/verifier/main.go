@@ -10,10 +10,10 @@ import (
 	"os"
 	"strings"
 
-	"veriglob/internal/presentation"
-	"veriglob/internal/resolver"
-	"veriglob/internal/revocation"
-	"veriglob/internal/vc"
+	"github.com/veriglob/veriglob-core/internal/presentation"
+	"github.com/veriglob/veriglob-core/internal/resolver"
+	"github.com/veriglob/veriglob-core/internal/revocation"
+	"github.com/veriglob/veriglob-core/internal/vc"
 )
 
 const defaultRegistryPath = "revocation_registry.json"
