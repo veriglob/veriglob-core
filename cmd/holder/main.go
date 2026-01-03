@@ -12,10 +12,10 @@ import (
 	"strings"
 	"syscall"
 
-	"veriglob/internal/crypto"
-	"veriglob/internal/did"
-	"veriglob/internal/presentation"
-	"veriglob/internal/storage"
+	"github.com/veriglob/veriglob-core/internal/crypto"
+	"github.com/veriglob/veriglob-core/internal/did"
+	"github.com/veriglob/veriglob-core/internal/presentation"
+	"github.com/veriglob/veriglob-core/internal/storage"
 
 	"golang.org/x/term"
 )

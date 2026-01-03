@@ -1,4 +1,4 @@
-module veriglob
+module github.com/veriglob/veriglob-core
 
 go 1.25.5
 
