@@ -21,14 +21,14 @@ Credentials use [PASETO](https://paseto.io/) (Platform-Agnostic Security Tokens)
 
 ### Token Claims
 
-| Claim | Description |
-|-------|-------------|
-| `iss` | Issuer DID |
-| `sub` | Subject DID |
-| `jti` | Credential ID (for revocation) |
-| `iat` | Issued at timestamp |
+| Claim | Description                            |
+| ----- | -------------------------------------- |
+| `iss` | Issuer DID                             |
+| `sub` | Subject DID                            |
+| `jti` | Credential ID (for revocation)         |
+| `iat` | Issued at timestamp                    |
 | `exp` | Expiration timestamp (default: 1 year) |
-| `vc` | Verifiable Credential payload |
+| `vc`  | Verifiable Credential payload          |
 
 ### Verifiable Credential Payload
 
@@ -214,11 +214,11 @@ Holders can wrap credentials in signed presentations for verifiers.
 
 ### Properties
 
-| Property | Description |
-|----------|-------------|
-| Expiration | 15 minutes (short-lived) |
-| Audience | Verifier's DID |
-| Nonce | Challenge for replay protection |
+| Property   | Description                     |
+| ---------- | ------------------------------- |
+| Expiration | 15 minutes (short-lived)        |
+| Audience   | Verifier's DID                  |
+| Nonce      | Challenge for replay protection |
 
 ### Example
 

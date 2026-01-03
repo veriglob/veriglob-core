@@ -27,15 +27,15 @@ type Entry struct {
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `credentialId` | Unique identifier (URN UUID format) |
-| `issuerDid` | DID of the credential issuer |
-| `subjectDid` | DID of the credential subject |
-| `status` | Current status: `active` or `revoked` |
-| `issuedAt` | Timestamp when credential was issued |
-| `revokedAt` | Timestamp when credential was revoked |
-| `reason` | Human-readable reason for revocation |
+| Field          | Description                           |
+| -------------- | ------------------------------------- |
+| `credentialId` | Unique identifier (URN UUID format)   |
+| `issuerDid`    | DID of the credential issuer          |
+| `subjectDid`   | DID of the credential subject         |
+| `status`       | Current status: `active` or `revoked` |
+| `issuedAt`     | Timestamp when credential was issued  |
+| `revokedAt`    | Timestamp when credential was revoked |
+| `reason`       | Human-readable reason for revocation  |
 
 ## Credential ID Format
 
@@ -46,6 +46,7 @@ urn:uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 Example:
+
 ```
 urn:uuid:3978344f-8596-4c3a-a978-8fcaba3903c5
 ```
@@ -61,9 +62,9 @@ credID, err := revocation.GenerateCredentialID()
 
 ## Status Values
 
-| Status | Description |
-|--------|-------------|
-| `active` | Credential is valid and not revoked |
+| Status    | Description                           |
+| --------- | ------------------------------------- |
+| `active`  | Credential is valid and not revoked   |
 | `revoked` | Credential has been revoked by issuer |
 
 ## Registry Operations
@@ -108,6 +109,7 @@ err := registry.Revoke(credentialID, "Employee terminated")
 ```
 
 Possible errors:
+
 - `ErrCredentialNotFound`: Credential ID not in registry
 - `ErrAlreadyRevoked`: Credential was already revoked
 
@@ -245,16 +247,16 @@ issuer list -registry ./registry.json
 
 ## Common Revocation Reasons
 
-| Reason | When to Use |
-|--------|-------------|
-| `Employee terminated` | Employment ended |
-| `Certificate expired` | Underlying certification expired |
+| Reason                | When to Use                                      |
+| --------------------- | ------------------------------------------------ |
+| `Employee terminated` | Employment ended                                 |
+| `Certificate expired` | Underlying certification expired                 |
 | `Information changed` | Subject's information changed (reissue required) |
-| `Issued in error` | Credential was issued incorrectly |
-| `Fraud detected` | Credential was obtained fraudulently |
-| `Key compromise` | Subject's key was compromised |
-| `Issuer request` | Issuer revoked for administrative reasons |
-| `Subject request` | Subject requested revocation |
+| `Issued in error`     | Credential was issued incorrectly                |
+| `Fraud detected`      | Credential was obtained fraudulently             |
+| `Key compromise`      | Subject's key was compromised                    |
+| `Issuer request`      | Issuer revoked for administrative reasons        |
+| `Subject request`     | Subject requested revocation                     |
 
 ## Future Considerations
 
@@ -263,4 +265,3 @@ issuer list -registry ./registry.json
 - **Accumulator-based**: Cryptographic accumulators for privacy
 - **Suspension**: Temporary revocation with reinstatement
 - **Delegation**: Allow authorized parties to revoke on issuer's behalf
-

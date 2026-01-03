@@ -38,11 +38,11 @@ type Wallet struct {
 
 // WalletData is the serializable wallet structure
 type WalletData struct {
-	Version     int                      `json:"version"`
-	CreatedAt   time.Time                `json:"createdAt"`
-	UpdatedAt   time.Time                `json:"updatedAt"`
-	DID         string                   `json:"did"`
-	Keys        KeyPair                  `json:"keys"`
+	Version     int                         `json:"version"`
+	CreatedAt   time.Time                   `json:"createdAt"`
+	UpdatedAt   time.Time                   `json:"updatedAt"`
+	DID         string                      `json:"did"`
+	Keys        KeyPair                     `json:"keys"`
 	Credentials map[string]StoredCredential `json:"credentials"`
 }
 
@@ -54,14 +54,14 @@ type KeyPair struct {
 
 // StoredCredential represents a stored verifiable credential
 type StoredCredential struct {
-	ID             string    `json:"id"`
-	Type           string    `json:"type"`
-	IssuerDID      string    `json:"issuerDid"`
-	IssuerPublicKey string   `json:"issuerPublicKey"`
-	Token          string    `json:"token"`
-	IssuedAt       time.Time `json:"issuedAt"`
-	ExpiresAt      time.Time `json:"expiresAt"`
-	StoredAt       time.Time `json:"storedAt"`
+	ID              string    `json:"id"`
+	Type            string    `json:"type"`
+	IssuerDID       string    `json:"issuerDid"`
+	IssuerPublicKey string    `json:"issuerPublicKey"`
+	Token           string    `json:"token"`
+	IssuedAt        time.Time `json:"issuedAt"`
+	ExpiresAt       time.Time `json:"expiresAt"`
+	StoredAt        time.Time `json:"storedAt"`
 }
 
 // encryptedWallet is the on-disk format
