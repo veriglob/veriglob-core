@@ -22,7 +22,7 @@ Do **NOT** open a public GitHub issue for security vulnerabilities.
 
 Instead, report responsibly using one of the following channels:
 
-- 📧 **Email:** security@veriglob.org
+- 📧 **Email:** security@veriglob.com
 - 🔐 **PGP (optional):** Available upon request
 
 Include as much detail as possible:

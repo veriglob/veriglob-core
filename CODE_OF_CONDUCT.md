@@ -48,7 +48,7 @@ Project maintainers are responsible for:
 
 Instances of abusive or unacceptable behavior may be reported by contacting:
 
-📧 **conduct@veriglob.org**
+📧 **conduct@veriglob.com**
 
 All complaints will be reviewed and investigated confidentially.
 
