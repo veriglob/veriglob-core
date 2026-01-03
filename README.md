@@ -5,6 +5,14 @@ It provides the foundational tools for building **privacy-preserving, user-contr
 
 ---
 
+> ⚠️ **Work in Progress:** veriglob-core is currently under active development.
+>
+> Some APIs may change, features are being added, and documentation may be incomplete.
+>
+> Contributions, feedback, and testing are highly welcome!
+
+---
+
 ## 🚀 Features
 
 - **Decentralized Identifiers (DIDs):** Support for `did:key` and future DID methods
