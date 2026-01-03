@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	ErrInvalidDID         = errors.New("invalid DID format")
-	ErrUnsupportedMethod  = errors.New("unsupported DID method")
-	ErrInvalidMulticodec  = errors.New("invalid multicodec prefix")
-	ErrInvalidKeyLength   = errors.New("invalid public key length")
+	ErrInvalidDID        = errors.New("invalid DID format")
+	ErrUnsupportedMethod = errors.New("unsupported DID method")
+	ErrInvalidMulticodec = errors.New("invalid multicodec prefix")
+	ErrInvalidKeyLength  = errors.New("invalid public key length")
 )
 
 // ed25519Multicodec is the multicodec prefix for Ed25519 public keys (0xed01)

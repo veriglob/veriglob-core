@@ -17,12 +17,12 @@ type CredentialStatus struct {
 
 // VCClaims represents a PASETO Verifiable Credential
 type VCClaims struct {
-	Issuer       string               `json:"iss"`
-	Subject      string               `json:"sub"`
-	JTI          string               `json:"jti"`
-	IssuedAt     time.Time            `json:"iat"`
-	ExpiresAt    time.Time            `json:"exp"`
-	VC           VerifiableCredential `json:"vc"`
+	Issuer    string               `json:"iss"`
+	Subject   string               `json:"sub"`
+	JTI       string               `json:"jti"`
+	IssuedAt  time.Time            `json:"iat"`
+	ExpiresAt time.Time            `json:"exp"`
+	VC        VerifiableCredential `json:"vc"`
 }
 
 // VerifiableCredential payload
