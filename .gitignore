@@ -1,0 +1,47 @@
+# Go build artifacts
+/bin/
+/pkg/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Environment variables
+.env
+.env.*
+
+# Keys & sensitive data
+*.key
+*.pem
+*.p12
+*.pfx
+wallet.json
+keys/
+secrets/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage.out
