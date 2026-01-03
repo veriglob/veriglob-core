@@ -1,0 +1,10 @@
+{
+  "urn:uuid:203a1fa3-70ff-37e1-6343-4a0cc0fe09e8": {
+    "credentialId": "urn:uuid:203a1fa3-70ff-37e1-6343-4a0cc0fe09e8",
+    "issuerDid": "did:key:z6MkrDf4miubuTpTipWbGAUVA2qw527MbEgs3bx1BejF9MGb",
+    "subjectDid": "did:key:z6MktYEbBap53ZyhHp4ZCLKZQmVSAJkpMtuSP8zpajhNXLt2",
+    "status": "active",
+    "issuedAt": "2026-01-03T14:18:49.06097Z",
+    "revokedAt": "0001-01-01T00:00:00Z"
+  }
+}

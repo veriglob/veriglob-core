@@ -1,8 +1,3 @@
----
-
-## 📄 `THREAT_MODEL.md`
-
-```md
 # Threat Model – Veriglob Core
 
 This document outlines high-level threats and mitigations for the Veriglob decentralised identity protocol.
