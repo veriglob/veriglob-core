@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewResolver(t *testing.T) {
-	r := New()
+	r := NewResolver()
 	if r == nil {
 		t.Fatal("New() returned nil")
 	}
@@ -29,7 +29,7 @@ func TestResolveValidDIDKey(t *testing.T) {
 	did := "did:key:" + encoded
 
 	// Resolve
-	r := New()
+	r := NewResolver()
 	resolvedPub, err := r.Resolve(did)
 	if err != nil {
 		t.Fatalf("Failed to resolve DID: %v", err)
@@ -60,7 +60,7 @@ func TestResolveDIDConvenienceFunction(t *testing.T) {
 }
 
 func TestResolveInvalidDID(t *testing.T) {
-	r := New()
+	r := NewResolver()
 
 	tests := []struct {
 		name string
@@ -84,7 +84,7 @@ func TestResolveInvalidDID(t *testing.T) {
 }
 
 func TestResolveUnsupportedMethod(t *testing.T) {
-	r := New()
+	r := NewResolver()
 
 	_, err := r.Resolve("did:web:example.com")
 	if err != ErrUnsupportedMethod {
@@ -98,7 +98,7 @@ func TestResolveUnsupportedMethod(t *testing.T) {
 }
 
 func TestResolveInvalidMultibase(t *testing.T) {
-	r := New()
+	r := NewResolver()
 
 	// Missing 'z' prefix
 	_, err := r.Resolve("did:key:6MkTest")
@@ -108,7 +108,7 @@ func TestResolveInvalidMultibase(t *testing.T) {
 }
 
 func TestResolveInvalidMulticodec(t *testing.T) {
-	r := New()
+	r := NewResolver()
 
 	// Valid base58 but wrong multicodec prefix
 	wrongPrefix := []byte{0x00, 0x01} // Not Ed25519 prefix
@@ -124,7 +124,7 @@ func TestResolveInvalidMulticodec(t *testing.T) {
 }
 
 func TestResolveInvalidKeyLength(t *testing.T) {
-	r := New()
+	r := NewResolver()
 
 	// Correct multicodec but wrong key length
 	multicodec := []byte{0xed, 0x01}
