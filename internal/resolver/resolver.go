@@ -22,7 +22,7 @@ var ed25519Multicodec = []byte{0xed, 0x01}
 type Resolver struct{}
 
 // New creates a new DID resolver
-func New() *Resolver {
+func NewResolver() *Resolver {
 	return &Resolver{}
 }
 
@@ -81,5 +81,5 @@ func (r *Resolver) resolveKey(identifier string) (ed25519.PublicKey, error) {
 
 // ResolveDID is a convenience function that creates a resolver and resolves a DID
 func ResolveDID(did string) (ed25519.PublicKey, error) {
-	return New().Resolve(did)
+	return NewResolver().Resolve(did)
 }
