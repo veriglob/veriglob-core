@@ -32,6 +32,9 @@ type (
 
 	// SNARKProof contains a zk-SNARK proof for a predicate
 	SNARKProof = zkp.SNARKProof
+
+	// ZKCredentialSubject is the interface for credential subjects supporting ZK proofs
+	ZKCredentialSubject = zkp.ZKCredentialSubject
 )
 
 // BBS+ types
