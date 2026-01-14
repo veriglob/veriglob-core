@@ -82,7 +82,8 @@ type (
 var (
 	ErrWalletNotFound   = storage.ErrWalletNotFound
 	ErrWalletExists     = storage.ErrWalletExists
-	ErrInvalidPassword  = storage.ErrInvalidPassword
+	ErrInvalidMnemonic  = storage.ErrInvalidMnemonic
+	ErrInvalidWordCount = storage.ErrInvalidWordCount
 	ErrCredentialExists = storage.ErrCredentialExists
 )
 
