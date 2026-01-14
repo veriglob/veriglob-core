@@ -11,16 +11,18 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/pbkdf2"
 )
 
 var (
-	ErrWalletNotFound   = errors.New("wallet not found")
-	ErrWalletExists     = errors.New("wallet already exists")
-	ErrInvalidPassword  = errors.New("invalid password")
-	ErrCredentialExists = errors.New("credential already exists")
+	ErrWalletNotFound    = errors.New("wallet not found")
+	ErrWalletExists      = errors.New("wallet already exists")
+	ErrInvalidMnemonic   = errors.New("invalid mnemonic")
+	ErrCredentialExists  = errors.New("credential already exists")
+	ErrInvalidWordCount  = errors.New("mnemonic must be 12 or 24 words")
 )
 
 const (
@@ -31,9 +33,9 @@ const (
 
 // Wallet stores keys and credentials
 type Wallet struct {
-	path       string
-	data       *WalletData
-	passphrase string
+	path     string
+	data     *WalletData
+	mnemonic string
 }
 
 // WalletData is the serializable wallet structure
@@ -71,10 +73,16 @@ type encryptedWallet struct {
 	Ciphertext []byte `json:"ciphertext"`
 }
 
-// CreateWallet creates a new wallet with the given passphrase
-func CreateWallet(path, passphrase string) (*Wallet, error) {
+// CreateWallet creates a new wallet with the given mnemonic phrase.
+// The mnemonic should be a 12 or 24 word BIP39-style recovery phrase provided by the user.
+func CreateWallet(path, mnemonic string) (*Wallet, error) {
 	if _, err := os.Stat(path); err == nil {
 		return nil, ErrWalletExists
+	}
+
+	// Validate mnemonic provided by user
+	if err := ValidateMnemonic(mnemonic); err != nil {
+		return nil, err
 	}
 
 	// Create directory if needed
@@ -85,8 +93,8 @@ func CreateWallet(path, passphrase string) (*Wallet, error) {
 
 	now := time.Now()
 	w := &Wallet{
-		path:       path,
-		passphrase: passphrase,
+		path:     path,
+		mnemonic: mnemonic,
 		data: &WalletData{
 			Version:     1,
 			CreatedAt:   now,
@@ -102,10 +110,21 @@ func CreateWallet(path, passphrase string) (*Wallet, error) {
 	return w, nil
 }
 
-// OpenWallet opens an existing wallet
-func OpenWallet(path, passphrase string) (*Wallet, error) {
+// GetMnemonic returns the wallet's mnemonic phrase.
+// This should be stored securely by the user for recovery.
+func (w *Wallet) GetMnemonic() string {
+	return w.mnemonic
+}
+
+// OpenWallet opens an existing wallet using the mnemonic phrase.
+func OpenWallet(path, mnemonic string) (*Wallet, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, ErrWalletNotFound
+	}
+
+	// Validate mnemonic
+	if err := ValidateMnemonic(mnemonic); err != nil {
+		return nil, err
 	}
 
 	data, err := os.ReadFile(path)
@@ -118,8 +137,8 @@ func OpenWallet(path, passphrase string) (*Wallet, error) {
 		return nil, err
 	}
 
-	// Derive key from passphrase
-	key := pbkdf2.Key([]byte(passphrase), ew.Salt, pbkdf2Iterations, keySize, sha256.New)
+	// Derive key from mnemonic
+	key := pbkdf2.Key([]byte(mnemonic), ew.Salt, pbkdf2Iterations, keySize, sha256.New)
 
 	// Decrypt
 	block, err := aes.NewCipher(key)
@@ -134,7 +153,7 @@ func OpenWallet(path, passphrase string) (*Wallet, error) {
 
 	plaintext, err := gcm.Open(nil, ew.Nonce, ew.Ciphertext, nil)
 	if err != nil {
-		return nil, ErrInvalidPassword
+		return nil, ErrInvalidMnemonic
 	}
 
 	var walletData WalletData
@@ -143,9 +162,9 @@ func OpenWallet(path, passphrase string) (*Wallet, error) {
 	}
 
 	return &Wallet{
-		path:       path,
-		passphrase: passphrase,
-		data:       &walletData,
+		path:     path,
+		mnemonic: mnemonic,
+		data:     &walletData,
 	}, nil
 }
 
@@ -164,8 +183,8 @@ func (w *Wallet) Save() error {
 		return err
 	}
 
-	// Derive key from passphrase
-	key := pbkdf2.Key([]byte(w.passphrase), salt, pbkdf2Iterations, keySize, sha256.New)
+	// Derive key from mnemonic
+	key := pbkdf2.Key([]byte(w.mnemonic), salt, pbkdf2Iterations, keySize, sha256.New)
 
 	// Encrypt
 	block, err := aes.NewCipher(key)
@@ -263,4 +282,39 @@ func (w *Wallet) RemoveCredential(id string) error {
 // Export returns the wallet data as JSON (for backup)
 func (w *Wallet) Export() ([]byte, error) {
 	return json.MarshalIndent(w.data, "", "  ")
+}
+
+// ValidateMnemonic checks if the mnemonic has the correct format.
+// Accepts 12 or 24 word mnemonics.
+func ValidateMnemonic(mnemonic string) error {
+	if mnemonic == "" {
+		return ErrInvalidMnemonic
+	}
+
+	words := strings.Fields(mnemonic)
+	wordCount := len(words)
+
+	if wordCount != 12 && wordCount != 24 {
+		return ErrInvalidWordCount
+	}
+
+	return nil
+}
+
+// DeriveKeysFromMnemonic derives Ed25519 keys from a mnemonic phrase.
+// This provides deterministic key generation from the recovery phrase.
+func DeriveKeysFromMnemonic(mnemonic string) (ed25519.PublicKey, ed25519.PrivateKey, error) {
+	if err := ValidateMnemonic(mnemonic); err != nil {
+		return nil, nil, err
+	}
+
+	// Derive seed from mnemonic using PBKDF2
+	// Using "veriglob" as the salt for domain separation
+	seed := pbkdf2.Key([]byte(mnemonic), []byte("veriglob-ed25519-seed"), pbkdf2Iterations, ed25519.SeedSize, sha256.New)
+
+	// Generate Ed25519 key pair from seed
+	privateKey := ed25519.NewKeyFromSeed(seed)
+	publicKey := privateKey.Public().(ed25519.PublicKey)
+
+	return publicKey, privateKey, nil
 }

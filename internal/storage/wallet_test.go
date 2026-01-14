@@ -17,12 +17,14 @@ func generateTestKeypair(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
 	return pub, priv
 }
 
+// Test mnemonic (12 words)
+const testMnemonic = "abandon ability able about above absent absorb abstract absurd abuse access accident"
+
 func TestCreateWallet(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
-	passphrase := "testpassword123"
 
-	wallet, err := CreateWallet(path, passphrase)
+	wallet, err := CreateWallet(path, testMnemonic)
 	if err != nil {
 		t.Fatalf("Failed to create wallet: %v", err)
 	}
@@ -41,9 +43,11 @@ func TestCreateWalletAlreadyExists(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	CreateWallet(path, "pass1")
+	CreateWallet(path, testMnemonic)
 
-	_, err := CreateWallet(path, "pass2")
+	// Different mnemonic but same path should fail
+	mnemonic2 := "abandon ability able about above absent absorb abstract absurd abuse access acid"
+	_, err := CreateWallet(path, mnemonic2)
 	if err != ErrWalletExists {
 		t.Errorf("Expected ErrWalletExists, got %v", err)
 	}
@@ -52,15 +56,14 @@ func TestCreateWalletAlreadyExists(t *testing.T) {
 func TestOpenWallet(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
-	passphrase := "testpassword123"
 
 	// Create wallet
-	w1, _ := CreateWallet(path, passphrase)
+	w1, _ := CreateWallet(path, testMnemonic)
 	pub, priv := generateTestKeypair(t)
 	w1.SetKeys(pub, priv, "did:key:test")
 
 	// Open wallet
-	w2, err := OpenWallet(path, passphrase)
+	w2, err := OpenWallet(path, testMnemonic)
 	if err != nil {
 		t.Fatalf("Failed to open wallet: %v", err)
 	}
@@ -70,20 +73,22 @@ func TestOpenWallet(t *testing.T) {
 	}
 }
 
-func TestOpenWalletWrongPassword(t *testing.T) {
+func TestOpenWalletWrongMnemonic(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	CreateWallet(path, "correctpassword")
+	CreateWallet(path, testMnemonic)
 
-	_, err := OpenWallet(path, "wrongpassword")
-	if err != ErrInvalidPassword {
-		t.Errorf("Expected ErrInvalidPassword, got %v", err)
+	// Try with different mnemonic
+	wrongMnemonic := "abandon ability able about above absent absorb abstract absurd abuse access acid"
+	_, err := OpenWallet(path, wrongMnemonic)
+	if err != ErrInvalidMnemonic {
+		t.Errorf("Expected ErrInvalidMnemonic, got %v", err)
 	}
 }
 
 func TestOpenWalletNotFound(t *testing.T) {
-	_, err := OpenWallet("/nonexistent/path/wallet.json", "pass")
+	_, err := OpenWallet("/nonexistent/path/wallet.json", testMnemonic)
 	if err != ErrWalletNotFound {
 		t.Errorf("Expected ErrWalletNotFound, got %v", err)
 	}
@@ -93,7 +98,7 @@ func TestWalletSetAndGetKeys(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 	pub, priv := generateTestKeypair(t)
 	did := "did:key:z6MkTest"
 
@@ -124,7 +129,7 @@ func TestWalletGetKeysEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 
 	_, _, err := wallet.GetKeys()
 	if err == nil {
@@ -136,7 +141,7 @@ func TestWalletAddCredential(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 
 	cred := StoredCredential{
 		ID:              "urn:uuid:test-cred",
@@ -176,7 +181,7 @@ func TestWalletAddCredentialDuplicate(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 
 	cred := StoredCredential{ID: "urn:uuid:dup-test"}
 	wallet.AddCredential(cred)
@@ -191,7 +196,7 @@ func TestWalletGetCredentialNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 
 	_, err := wallet.GetCredential("nonexistent")
 	if err == nil {
@@ -203,7 +208,7 @@ func TestWalletListCredentials(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 
 	// Empty initially
 	creds := wallet.ListCredentials()
@@ -226,7 +231,7 @@ func TestWalletRemoveCredential(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 
 	wallet.AddCredential(StoredCredential{ID: "to-remove"})
 
@@ -245,7 +250,7 @@ func TestWalletRemoveCredentialNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 
 	err := wallet.RemoveCredential("nonexistent")
 	if err == nil {
@@ -257,7 +262,7 @@ func TestWalletExport(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "pass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 	pub, priv := generateTestKeypair(t)
 	wallet.SetKeys(pub, priv, "did:key:export-test")
 	wallet.AddCredential(StoredCredential{ID: "export-cred"})
@@ -284,16 +289,15 @@ func TestWalletExport(t *testing.T) {
 func TestWalletPersistence(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
-	pass := "persistencetest"
 
 	// Create and populate wallet
-	w1, _ := CreateWallet(path, pass)
+	w1, _ := CreateWallet(path, testMnemonic)
 	pub, priv := generateTestKeypair(t)
 	w1.SetKeys(pub, priv, "did:key:persist")
 	w1.AddCredential(StoredCredential{ID: "persist-cred", Type: "TestCred"})
 
 	// Open wallet again
-	w2, err := OpenWallet(path, pass)
+	w2, err := OpenWallet(path, testMnemonic)
 	if err != nil {
 		t.Fatalf("Failed to reopen wallet: %v", err)
 	}
@@ -318,7 +322,7 @@ func TestWalletEncryption(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "wallet.json")
 
-	wallet, _ := CreateWallet(path, "secretpass")
+	wallet, _ := CreateWallet(path, testMnemonic)
 	pub, priv := generateTestKeypair(t)
 	wallet.SetKeys(pub, priv, "did:key:encrypted")
 
@@ -335,6 +339,65 @@ func TestWalletEncryption(t *testing.T) {
 	}
 	if contains(dataStr, "publicKey") {
 		t.Error("Wallet file should not contain plaintext key field names")
+	}
+}
+
+func TestValidateMnemonic(t *testing.T) {
+	// Valid 12-word mnemonic
+	err := ValidateMnemonic(testMnemonic)
+	if err != nil {
+		t.Errorf("Valid 12-word mnemonic should pass: %v", err)
+	}
+
+	// Valid 24-word mnemonic
+	mnemonic24 := "abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual"
+	err = ValidateMnemonic(mnemonic24)
+	if err != nil {
+		t.Errorf("Valid 24-word mnemonic should pass: %v", err)
+	}
+
+	// Invalid: empty
+	err = ValidateMnemonic("")
+	if err != ErrInvalidMnemonic {
+		t.Errorf("Empty mnemonic should fail with ErrInvalidMnemonic, got %v", err)
+	}
+
+	// Invalid: wrong word count
+	err = ValidateMnemonic("one two three")
+	if err != ErrInvalidWordCount {
+		t.Errorf("Wrong word count should fail with ErrInvalidWordCount, got %v", err)
+	}
+}
+
+func TestDeriveKeysFromMnemonic(t *testing.T) {
+	pub1, priv1, err := DeriveKeysFromMnemonic(testMnemonic)
+	if err != nil {
+		t.Fatalf("Failed to derive keys: %v", err)
+	}
+
+	// Derive again - should get same keys (deterministic)
+	pub2, priv2, err := DeriveKeysFromMnemonic(testMnemonic)
+	if err != nil {
+		t.Fatalf("Failed to derive keys second time: %v", err)
+	}
+
+	if !pub1.Equal(pub2) {
+		t.Error("Public keys should be deterministic")
+	}
+
+	if !priv1.Equal(priv2) {
+		t.Error("Private keys should be deterministic")
+	}
+
+	// Different mnemonic should give different keys
+	differentMnemonic := "abandon ability able about above absent absorb abstract absurd abuse access acid"
+	pub3, _, err := DeriveKeysFromMnemonic(differentMnemonic)
+	if err != nil {
+		t.Fatalf("Failed to derive keys from different mnemonic: %v", err)
+	}
+
+	if pub1.Equal(pub3) {
+		t.Error("Different mnemonics should produce different keys")
 	}
 }
 

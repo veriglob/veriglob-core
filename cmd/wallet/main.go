@@ -69,9 +69,10 @@ func main() {
 	printUsage()
 }
 
-func readPassword(prompt string) string {
+func readMnemonic(prompt string) string {
 	fmt.Print(prompt)
-	password, err := term.ReadPassword(int(syscall.Stdin))
+	// Try to read from terminal (hidden input)
+	mnemonic, err := term.ReadPassword(int(syscall.Stdin))
 	fmt.Println()
 	if err != nil {
 		// Fallback for non-terminal input
@@ -79,7 +80,7 @@ func readPassword(prompt string) string {
 		line, _ := reader.ReadString('\n')
 		return strings.TrimSpace(line)
 	}
-	return string(password)
+	return string(mnemonic)
 }
 
 func createWallet(path string) {
@@ -96,28 +97,39 @@ func createWallet(path string) {
 		os.Remove(path)
 	}
 
-	// Get passphrase
-	pass1 := readPassword("Enter passphrase: ")
-	pass2 := readPassword("Confirm passphrase: ")
+	fmt.Println("Enter your 12 or 24 word mnemonic recovery phrase.")
+	fmt.Println("Words should be separated by spaces.")
+	fmt.Println()
 
-	if pass1 != pass2 {
-		log.Fatal("Passphrases do not match")
+	// Get mnemonic
+	mnemonic := readMnemonic("Mnemonic: ")
+
+	// Validate mnemonic
+	if err := storage.ValidateMnemonic(mnemonic); err != nil {
+		log.Fatalf("Invalid mnemonic: %v", err)
 	}
 
-	if len(pass1) < 8 {
-		log.Fatal("Passphrase must be at least 8 characters")
+	// Confirm mnemonic
+	mnemonic2 := readMnemonic("Confirm mnemonic: ")
+
+	if mnemonic != mnemonic2 {
+		log.Fatal("Mnemonics do not match")
 	}
 
 	// Create wallet
-	wallet, err := storage.CreateWallet(path, pass1)
+	wallet, err := storage.CreateWallet(path, mnemonic)
 	if err != nil {
 		log.Fatalf("Failed to create wallet: %v", err)
 	}
 
-	// Generate keypair
-	pub, priv, err := crypto.GenerateEd25519Keypair()
+	// Derive keypair from mnemonic for deterministic keys
+	pub, priv, err := storage.DeriveKeysFromMnemonic(mnemonic)
 	if err != nil {
-		log.Fatalf("Failed to generate keypair: %v", err)
+		// Fallback to random keys if derivation fails
+		pub, priv, err = crypto.GenerateEd25519Keypair()
+		if err != nil {
+			log.Fatalf("Failed to generate keypair: %v", err)
+		}
 	}
 
 	// Create DID
@@ -131,25 +143,31 @@ func createWallet(path string) {
 		log.Fatalf("Failed to save keys: %v", err)
 	}
 
+	fmt.Println()
 	fmt.Println("Wallet created successfully!")
 	fmt.Println()
 	fmt.Println("DID:", didKey.DID)
 	fmt.Println("Wallet:", path)
 	fmt.Println()
-	fmt.Println("IMPORTANT: Remember your passphrase. It cannot be recovered.")
+	fmt.Println("IMPORTANT: Your mnemonic is the ONLY way to recover your wallet.")
+	fmt.Println("Store it securely and never share it with anyone.")
 }
 
 func showWallet(path string) {
-	pass := readPassword("Enter passphrase: ")
+	mnemonic := readMnemonic("Enter mnemonic: ")
 
-	wallet, err := storage.OpenWallet(path, pass)
+	wallet, err := storage.OpenWallet(path, mnemonic)
 	if err != nil {
 		if err == storage.ErrWalletNotFound {
 			fmt.Println("Wallet not found. Create one with: wallet -create")
 			return
 		}
-		if err == storage.ErrInvalidPassword {
-			fmt.Println("Invalid passphrase")
+		if err == storage.ErrInvalidMnemonic {
+			fmt.Println("Invalid mnemonic")
+			return
+		}
+		if err == storage.ErrInvalidWordCount {
+			fmt.Println("Invalid mnemonic: must be 12 or 24 words")
 			return
 		}
 		log.Fatalf("Failed to open wallet: %v", err)
@@ -176,12 +194,12 @@ func showWallet(path string) {
 }
 
 func listCredentials(path string) {
-	pass := readPassword("Enter passphrase: ")
+	mnemonic := readMnemonic("Enter mnemonic: ")
 
-	wallet, err := storage.OpenWallet(path, pass)
+	wallet, err := storage.OpenWallet(path, mnemonic)
 	if err != nil {
-		if err == storage.ErrInvalidPassword {
-			fmt.Println("Invalid passphrase")
+		if err == storage.ErrInvalidMnemonic || err == storage.ErrInvalidWordCount {
+			fmt.Println("Invalid mnemonic")
 			return
 		}
 		log.Fatalf("Failed to open wallet: %v", err)
@@ -206,12 +224,12 @@ func listCredentials(path string) {
 }
 
 func addCredential(walletPath, credPath string) {
-	pass := readPassword("Enter passphrase: ")
+	mnemonic := readMnemonic("Enter mnemonic: ")
 
-	wallet, err := storage.OpenWallet(walletPath, pass)
+	wallet, err := storage.OpenWallet(walletPath, mnemonic)
 	if err != nil {
-		if err == storage.ErrInvalidPassword {
-			fmt.Println("Invalid passphrase")
+		if err == storage.ErrInvalidMnemonic || err == storage.ErrInvalidWordCount {
+			fmt.Println("Invalid mnemonic")
 			return
 		}
 		log.Fatalf("Failed to open wallet: %v", err)
@@ -259,12 +277,12 @@ func addCredential(walletPath, credPath string) {
 }
 
 func exportWallet(path string) {
-	pass := readPassword("Enter passphrase: ")
+	mnemonic := readMnemonic("Enter mnemonic: ")
 
-	wallet, err := storage.OpenWallet(path, pass)
+	wallet, err := storage.OpenWallet(path, mnemonic)
 	if err != nil {
-		if err == storage.ErrInvalidPassword {
-			fmt.Println("Invalid passphrase")
+		if err == storage.ErrInvalidMnemonic || err == storage.ErrInvalidWordCount {
+			fmt.Println("Invalid mnemonic")
 			return
 		}
 		log.Fatalf("Failed to open wallet: %v", err)
@@ -290,4 +308,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -wallet <path>    Path to wallet file (default: ~/.veriglob/wallet.json)")
+	fmt.Println()
+	fmt.Println("Authentication:")
+	fmt.Println("  All operations require your 12 or 24 word mnemonic recovery phrase.")
 }
