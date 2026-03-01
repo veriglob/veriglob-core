@@ -18,11 +18,11 @@ import (
 )
 
 var (
-	ErrWalletNotFound    = errors.New("wallet not found")
-	ErrWalletExists      = errors.New("wallet already exists")
-	ErrInvalidMnemonic   = errors.New("invalid mnemonic")
-	ErrCredentialExists  = errors.New("credential already exists")
-	ErrInvalidWordCount  = errors.New("mnemonic must be 12 or 24 words")
+	ErrWalletNotFound   = errors.New("wallet not found")
+	ErrWalletExists     = errors.New("wallet already exists")
+	ErrInvalidMnemonic  = errors.New("invalid mnemonic")
+	ErrCredentialExists = errors.New("credential already exists")
+	ErrInvalidWordCount = errors.New("mnemonic must be 12 or 24 words")
 )
 
 const (
@@ -33,19 +33,23 @@ const (
 
 // Wallet stores keys and credentials
 type Wallet struct {
-	path     string
-	data     *WalletData
-	mnemonic string
+	path        string
+	data        *WalletData
+	mnemonic    string
+	keyProvider KeyProvider // Optional: for HSM or custom key storage
+	keyID       string      // Key ID when using KeyProvider
 }
 
 // WalletData is the serializable wallet structure
 type WalletData struct {
-	Version     int                         `json:"version"`
-	CreatedAt   time.Time                   `json:"createdAt"`
-	UpdatedAt   time.Time                   `json:"updatedAt"`
-	DID         string                      `json:"did"`
-	Keys        KeyPair                     `json:"keys"`
-	Credentials map[string]StoredCredential `json:"credentials"`
+	Version         int                         `json:"version"`
+	CreatedAt       time.Time                   `json:"createdAt"`
+	UpdatedAt       time.Time                   `json:"updatedAt"`
+	DID             string                      `json:"did"`
+	Keys            KeyPair                     `json:"keys"`
+	Credentials     map[string]StoredCredential `json:"credentials"`
+	KeyProviderType KeyProviderType             `json:"keyProviderType,omitempty"` // "software" or "hsm"
+	KeyID           string                      `json:"keyId,omitempty"`           // Key ID for KeyProvider
 }
 
 // KeyPair stores the public and private keys
@@ -73,9 +77,20 @@ type encryptedWallet struct {
 	Ciphertext []byte `json:"ciphertext"`
 }
 
+// WalletOptions contains optional configuration for wallet creation.
+type WalletOptions struct {
+	KeyProvider KeyProvider // Optional: use HSM or custom key provider
+}
+
 // CreateWallet creates a new wallet with the given mnemonic phrase.
 // The mnemonic should be a 12 or 24 word BIP39-style recovery phrase provided by the user.
 func CreateWallet(path, mnemonic string) (*Wallet, error) {
+	return CreateWalletWithOptions(path, mnemonic, nil)
+}
+
+// CreateWalletWithOptions creates a new wallet with optional KeyProvider.
+// If opts is nil or opts.KeyProvider is nil, uses software-based key storage.
+func CreateWalletWithOptions(path, mnemonic string, opts *WalletOptions) (*Wallet, error) {
 	if _, err := os.Stat(path); err == nil {
 		return nil, ErrWalletExists
 	}
@@ -103,6 +118,12 @@ func CreateWallet(path, mnemonic string) (*Wallet, error) {
 		},
 	}
 
+	// Set up KeyProvider if provided
+	if opts != nil && opts.KeyProvider != nil {
+		w.keyProvider = opts.KeyProvider
+		w.data.KeyProviderType = opts.KeyProvider.Type()
+	}
+
 	if err := w.Save(); err != nil {
 		return nil, err
 	}
@@ -118,6 +139,12 @@ func (w *Wallet) GetMnemonic() string {
 
 // OpenWallet opens an existing wallet using the mnemonic phrase.
 func OpenWallet(path, mnemonic string) (*Wallet, error) {
+	return OpenWalletWithOptions(path, mnemonic, nil)
+}
+
+// OpenWalletWithOptions opens an existing wallet with optional KeyProvider.
+// If the wallet was created with an HSM, you must provide the same HSM provider.
+func OpenWalletWithOptions(path, mnemonic string, opts *WalletOptions) (*Wallet, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, ErrWalletNotFound
 	}
@@ -161,11 +188,22 @@ func OpenWallet(path, mnemonic string) (*Wallet, error) {
 		return nil, err
 	}
 
-	return &Wallet{
+	w := &Wallet{
 		path:     path,
 		mnemonic: mnemonic,
 		data:     &walletData,
-	}, nil
+	}
+
+	// Restore KeyProvider if provided and wallet uses one
+	if opts != nil && opts.KeyProvider != nil {
+		if walletData.KeyProviderType != "" && walletData.KeyProviderType != opts.KeyProvider.Type() {
+			return nil, errors.New("key provider type mismatch")
+		}
+		w.keyProvider = opts.KeyProvider
+		w.keyID = walletData.KeyID
+	}
+
+	return w, nil
 }
 
 // Save encrypts and saves the wallet to disk
@@ -218,23 +256,104 @@ func (w *Wallet) Save() error {
 	return os.WriteFile(w.path, data, 0600)
 }
 
-// SetKeys stores the key pair in the wallet
+// SetKeys stores the key pair in the wallet.
+// If a KeyProvider is configured, the key will be imported into it.
 func (w *Wallet) SetKeys(pub ed25519.PublicKey, priv ed25519.PrivateKey, did string) error {
 	w.data.DID = did
-	w.data.Keys = KeyPair{
-		PublicKey:  pub,
-		PrivateKey: priv,
+
+	if w.keyProvider != nil {
+		// Import key into KeyProvider
+		keyID, err := w.keyProvider.ImportKey(pub, priv)
+		if err != nil {
+			return err
+		}
+		w.keyID = keyID
+		w.data.KeyID = keyID
+		// Only store public key, private key is in KeyProvider
+		w.data.Keys = KeyPair{
+			PublicKey: pub,
+		}
+	} else {
+		// Store both keys in wallet (software mode)
+		w.data.Keys = KeyPair{
+			PublicKey:  pub,
+			PrivateKey: priv,
+		}
 	}
 	return w.Save()
 }
 
-// GetKeys retrieves the key pair from the wallet
+// GenerateKeys generates a new key pair using the configured KeyProvider.
+// If no KeyProvider is set, derives keys from the mnemonic.
+func (w *Wallet) GenerateKeys(did string) error {
+	w.data.DID = did
+
+	if w.keyProvider != nil {
+		// Generate key in KeyProvider (e.g., HSM)
+		pub, keyID, err := w.keyProvider.GenerateKey()
+		if err != nil {
+			return err
+		}
+		w.keyID = keyID
+		w.data.KeyID = keyID
+		w.data.Keys = KeyPair{
+			PublicKey: pub,
+		}
+	} else {
+		// Derive from mnemonic
+		pub, priv, err := DeriveKeysFromMnemonic(w.mnemonic)
+		if err != nil {
+			return err
+		}
+		w.data.Keys = KeyPair{
+			PublicKey:  pub,
+			PrivateKey: priv,
+		}
+	}
+	return w.Save()
+}
+
+// GetKeys retrieves the key pair from the wallet.
+// Note: When using HSM, the private key will be nil.
 func (w *Wallet) GetKeys() (ed25519.PublicKey, ed25519.PrivateKey, error) {
 	if len(w.data.Keys.PublicKey) == 0 {
 		return nil, nil, errors.New("no keys stored in wallet")
 	}
-	return ed25519.PublicKey(w.data.Keys.PublicKey),
-		ed25519.PrivateKey(w.data.Keys.PrivateKey), nil
+
+	pub := ed25519.PublicKey(w.data.Keys.PublicKey)
+
+	// For HSM wallets, private key is not available
+	if w.keyProvider != nil && w.data.KeyProviderType == KeyProviderHSM {
+		return pub, nil, nil
+	}
+
+	return pub, ed25519.PrivateKey(w.data.Keys.PrivateKey), nil
+}
+
+// Sign signs data using the wallet's private key.
+// Uses the KeyProvider if configured (e.g., HSM), otherwise uses the stored private key.
+func (w *Wallet) Sign(data []byte) ([]byte, error) {
+	if w.keyProvider != nil && w.keyID != "" {
+		return w.keyProvider.Sign(w.keyID, data)
+	}
+
+	// Software signing
+	if len(w.data.Keys.PrivateKey) == 0 {
+		return nil, errors.New("no private key available for signing")
+	}
+
+	priv := ed25519.PrivateKey(w.data.Keys.PrivateKey)
+	return ed25519.Sign(priv, data), nil
+}
+
+// GetKeyProvider returns the wallet's KeyProvider, if any.
+func (w *Wallet) GetKeyProvider() KeyProvider {
+	return w.keyProvider
+}
+
+// UsesHSM returns true if the wallet is configured to use an HSM.
+func (w *Wallet) UsesHSM() bool {
+	return w.data.KeyProviderType == KeyProviderHSM
 }
 
 // GetDID returns the wallet's DID
